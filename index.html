@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🏛️ Institute Annual Report Portal - Hackathon MVP</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh; padding: 20px;
+        }
+        .container { 
+            max-width: 1200px; margin: auto; background: white; 
+            border-radius: 15px; box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .header { 
+            background: linear-gradient(135deg, #007bff, #0056b3); 
+            color: white; padding: 30px; text-align: center;
+        }
+        .content { padding: 30px; }
+        .login-form, .dashboard { 
+            max-width: 500px; margin: 0 auto 30px; 
+            padding: 30px; border: 2px solid #e9ecef; border-radius: 12px;
+            background: #f8f9fa;
+        }
+        input, textarea, button { 
+            width: 100%; padding: 15px; margin: 10px 0; 
+            border: 2px solid #dee2e6; border-radius: 8px; font-size: 16px;
+        }
+        button { 
+            background: linear-gradient(135deg, #007bff, #0056b3); 
+            color: white; border: none; cursor: pointer; 
+            font-weight: bold; transition: all 0.3s;
+        }
+        button:hover { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(0,123,255,0.3); }
+        .report-preview { 
+            background: #e9ecef; padding: 20px; border-radius: 8px; 
+            margin: 20px 0;
+        }
+        table { 
+            width: 100%; border-collapse: collapse; margin: 15px 0; 
+            background: white; border-radius: 8px; overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        th { 
+            background: linear-gradient(135deg, #007bff, #0056b3); 
+            color: white; padding: 15px; text-align: left;
+        }
+        td { padding: 12px 15px; border-bottom: 1px solid #dee2e6; }
+        tr:hover { background: #f8f9fa; }
+        .hidden { display: none; }
+        .success { background: #d4edda; color: #155724; padding: 15px; border-radius: 8px; margin: 15px 0; }
+        .demo-hint { background: #fff3cd; padding: 15px; border-radius: 8px; margin-bottom: 20px; font-size: 14px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏛️ Institute Annual Report Portal</h1>
+            <p>Centralized Departmental Report Generation System</p>
+        </div>
+        
+        <div class="content">
+            <div id="loginSection" class="login-form">
+                <h2>🔐 Login</h2>
+                <div class="demo-hint">
+                    <strong>Demo Credentials:</strong><br>
+                    Username: <code>faculty1</code> / <code>hod1</code> / <code>admin</code><br>
+                    Password: <code>pass</code>
+                </div>
+                <input type="text" id="username" placeholder="Username" />
+                <input type="password" id="password" placeholder="Password" />
+                <button onclick="login()">🚀 Login</button>
+            </div>
+            
+            <div id="dashboard" class="hidden">
+                <div style="text-align: right; margin-bottom: 20px;">
+                    <button onclick="logout()" style="width: auto; padding: 10px 20px;">🚪 Logout</button>
+                </div>
+                <div id="userInfo"></div>
+                
+                <!-- Faculty/HoD Submission -->
+                <div id="submitSection" class="hidden">
+                    <h2>📤 Submit Departmental Data</h2>
+                    <input type="text" id="deptName" placeholder="Department Name (e.g., CSE, ECE)" />
+                    <textarea id="reportData" rows="6" placeholder='Enter JSON data:
+{
+  "achievements": ["Published 5 research papers", "2 patents filed"],
+  "metrics": {
+    "students": 250,
+    "faculty": 25,
+    "placements": 95
+  },
+  "events": ["Tech Fest 2025", "Workshop series"]
+}'></textarea>
+                    <button onclick="submitData()">💾 Submit Data</button>
+                    <div id="submitStatus"></div>
+                </div>
+                
+                <!-- Admin Panel -->
+                <div id="adminSection" class="hidden">
+                    <h2>⚙️ Admin: Generate Report</h2>
+                    <button onclick="generateReport()">📊 Generate Annual Report</button>
+                </div>
+                
+                <!-- Report Preview -->
+                <div id="reportSection" class="hidden">
+                    <h2>📋 Generated Report Preview</h2>
+                    <div id="reportPreview" class="report-preview"></div>
+                    <button onclick="exportPDF()">⬇️ Export PDF Report</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentUser = '';
+        let reports = JSON.parse(localStorage.getItem('annualReports')) || {};
+        
+        function login() {
+            const user = document.getElementById('username').value.trim();
+            const pass = document.getElementById('password').value;
+            
+            if (pass === 'pass' && ['faculty1', 'hod1', 'admin'].includes(user)) {
+                currentUser = user;
+                document.getElementById('loginSection').classList.add('hidden');
+                document.getElementById('dashboard').classList.remove('hidden');
+                document.getElementById('userInfo').innerHTML = 
+                    `<div class="success">✅ Welcome, <strong>${user.toUpperCase()}</strong>! Role activated.</div>`;
+                
+                if (user !== 'admin') {
+                    document.getElementById('submitSection').classList.remove('hidden');
+                } else {
+                    document.getElementById('adminSection').classList.remove('hidden');
+                    loadReports(); // Auto-load for admin
+                }
+            } else {
+                alert('❌ Invalid credentials!\nUse: faculty1/hod1/admin | pass: pass');
+            }
+        }
+        
+        function logout() {
+            currentUser = '';
+            document.getElementById('dashboard').classList.add('hidden');
+            document.getElementById('loginSection').classList.remove('hidden');
+            document.querySelectorAll('.hidden').forEach(el => el.classList.add('hidden'));
+            document.getElementById('username').value = '';
+            document.getElementById('password').value = '';
+        }
+        
+        function submitData() {
+            const dept = document.getElementById('deptName').value.trim();
+            const data = document.getElementById('reportData').value.trim();
+            
+            if (!dept || !data) {
+                alert('❌ Please enter Department Name and JSON Data');
+                return;
+            }
+            
+            try {
+                const parsedData = JSON.parse(data);
+                reports[dept] = parsedData;
+                localStorage.setItem('annualReports', JSON.stringify(reports));
+                
+                document.getElementById('submitStatus').innerHTML = 
+                    `<div class="success">✅ Data submitted for ${dept}! Total departments: ${Object.keys(reports).length}</div>`;
+                document.getElementById('deptName').value = '';
+                document.getElementById('reportData').value = '';
+                
+                if (currentUser === 'admin') loadReports();
+                
+            } catch (e) {
+                alert('❌ Invalid JSON format! Check your data structure.');
+            }
+        }
+        
+        function loadReports() {
+            const preview = document.getElementById('reportPreview');
+            if (!Object.keys(reports).length) {
+                preview.innerHTML = '<div style="text-align:center;color:#6c757d;">No departmental data submitted yet.</div>';
+                return;
+            }
+            
+            let tableHTML = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Department</th>
+                            <th>Achievements</th>
+                            <th>Key Metrics</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            
+            Object.entries(reports).forEach(([dept, data]) => {
+                const achievements = data.achievements?.slice(0,2).join(', ') || 'N/A';
+                const metrics = data.metrics ? 
+                    `Students: ${data.metrics.students || 0}` : 'N/A';
+                tableHTML += `
+                    <tr>
+                        <td><strong>${dept}</strong></td>
+                        <td>${achievements}${data.achievements?.length > 2 ? '...' : ''}</td>
+                        <td>${metrics}</td>
+                        <td><span style="color:#28a745;">✅ Submitted</span></td>
+                    </tr>
+                `;
+            });
+            
+            tableHTML += `
+                    </tbody>
+                    <tfoot>
+                        <tr style="background:#007bff;color:white;">
+                            <td><strong>Total Departments</strong></td>
+                            <td colspan="3"><strong>${Object.keys(reports).length}</strong></td>
+                        </tr>
+                    </tfoot>
+                </table>
+                <p><em>✅ Unified Annual Report ready for ${Object.keys(reports).length} departments!</em></p>
+            `;
+            
+            preview.innerHTML = tableHTML;
+            document.getElementById('reportSection').classList.remove('hidden');
+        }
+        
+        function generateReport() {
+            loadReports();
+            const preview = document.getElementById('reportPreview');
+            preview.innerHTML = `
+                <div class="success" style="margin-bottom:20px;">
+                    🎉 <strong>ANNUAL REPORT GENERATED SUCCESSFULLY!</strong><br>
+                    Aggregated from ${Object.keys(reports).length} departments.
+                </div>
+            ` + preview.innerHTML;
+        }
+        
+        function exportPDF() {
+            if (!Object.keys(reports).length) {
+                alert('❌ No data to export. Submit departmental data first.');
+                return;
+            }
+            alert(`📄 PDF Export Demo\n\n✅ Production: Uses jsPDF + html2canvas\n✅ ${Object.keys(reports).length} departments included\n✅ Ready for download\n\nFor hackathon: Print preview works! (Ctrl+P)`);
+            window.print();
+        }
+        
+        // Enter key support
+        document.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                if (document.getElementById('loginSection').offsetParent !== null) {
+                    login();
+                } else {
+                    submitData();
+                }
+            }
+        });
+    </script>
+</body>
+</html>
